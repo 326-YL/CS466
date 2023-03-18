@@ -2,6 +2,7 @@ import gzip
 import sys
 import os
 import re
+import string
 """
 P1 project
 CS466
@@ -14,39 +15,68 @@ stopword_lst = stopword_lst = ["a", "an", "and", "are", "as", "at", "be", "by", 
                     "has", "he", "in", "is", "it", "its", "of", "on", "that", "the", "to",
                     "was", "were", "with"]
 
-def textProcessing(inputFile,outputPrefixFile,tokenize_type):
+def textProcessing(inputFile,outPrefix,tokenize_type,stoplist_type,stemming_type):
     group=[]
     collection=[]
+    old_group=[]
+    words=[]
     with gzip.open(inputFile,'rt') as lines:
         for line in lines:
             #line_count=line_count+1
             #get each line words array
+            #print(f'line:{line}  len: {len(line)}')
             tokens=line.split()
+            #print(f'len of to:{len(tokens)}')
+
+            #print(f'tokens:{tokens}')
             #2d array
-            group.append(tokens)
+            if len(tokens)!=0:
+               #print(tokens)
+               group.append(tokens)
+               for e in tokens:
+                   words=[]
+                   words.append(e)
+                   old_group.append(words)
+                   
+    #print(f'group old:{old_group}')
     if tokenize_type=="fancy":
-        group=fancyToken(group)
-    else:
-        group=spaceToken(group)
+        collection=fancyToken(group)
+        #print(collection)
+        print(len(collection))
+        print(len(old_group))
+    elif tokenize_type=="spaces":
+        collection=spaceToken(group)
     if stoplist_type=="yesStop":
-        group=stopping(group)
+        collection=stopping(collection)
     if stemming_type=="porterStem":
-        group=stemming(group)
+        collection=stemming(collection)
     
     #outputPrefix-token
-    with open(outputPrefixFile,'w') as f:
-        for tokens in group:
-            for token in tokens:
-                f.write(token+' ')
+    outputPrefixToken=outPrefix+'-tokens.txt'
+    with open(outputPrefixToken,'w') as f:
+        #print(f'group:{group}')
+        for row in range(len(collection)):
+            #print(collection[row])
+            f.write(old_group[row][0])
+            for col in range(len(collection[row])):
+                f.write(' '+collection[row][col])
             f.write('\n')
+
+
+
     #outputPrefix-Heaps
-    flatten_group=sum(group,[])
+    flatten_group=sum(collection,[])
+    print(flatten_group)
+    print('after filter')
+    filter_group= list(filter(None, flatten_group))
+    print(filter_group)
     numTokens=[]
     numUniqueTokens=[]
-    count,total=0
+    count=0 
+    total=0
     unique=[]
-    token_matrix=[flatten_group[i:i + 4] for i in range(0, len(flatten_group), 4)]
-    print(len(set(flatten_group)))
+    token_matrix=[filter_group[i:i + 10] for i in range(0, len(filter_group), 10)]
+    print(len(set(filter_group)))
     for tokens in token_matrix:
         for token in tokens:
             if token not in unique:
@@ -55,33 +85,30 @@ def textProcessing(inputFile,outputPrefixFile,tokenize_type):
         total=total+len(tokens)
         numTokens.append(total)
         numUniqueTokens.append(count)
-    with open(outputPrefixFile,'w') as f:
+    outputPrefixHeaps=outPrefix+'-heaps.txt'
+    with open(outputPrefixHeaps,'w') as f:
         for x in range(len(numTokens)):
-            f.write(numTokens[x]+" "+numUniqueTokens[x]+'\n')
+            f.write(str(numTokens[x])+" "+str(numUniqueTokens[x])+'\n')
     #outputPrefix-stats
      #count frequency
+    N=100
     tokens={}
-    for x in flatten_group:
-        if flatten_group[x] not in tokens:
+    for x in filter_group:
+        if x not in tokens.keys():
+           tokens[x]=1
+        else:
+           tokens[x]=tokens[x]+1
 
-
-    
-    
-
-    
-
-
-
-
-
-def statisticOutput(outputFile):
-    """outfile=outputFileName
-    with open(outfile,'w') as f:
-        for e in group:
-            #print(e)
-            f.write(e+'\n')"""
-
-    
+    sorted_tokens=dict(sorted(tokens.items(), key=lambda kv: (-kv[1], kv[0])))
+    topN=dict(list(sorted_tokens.items())[0: N])
+    print(topN)
+    outputPrefixStats=outPrefix+'-stats.txt'
+    with open(outputPrefixStats,'w') as f:
+        f.write(str(total)+'\n')
+        f.write(str(count)+'\n')
+        for key,value in topN.items():
+            f.write(str(key)+" "+str(value)+'\n')
+  
 def spaceToken(group):
     seeds=[]
     for tokens in group:
@@ -89,10 +116,8 @@ def spaceToken(group):
         for token in tokens:
             seed=[]
             seed.append(token)
-            seed.append(token)
             seeds.append(seed)
     return seeds
-
 
 
 def fancyToken(group):   
@@ -100,14 +125,16 @@ def fancyToken(group):
     #text processing
     new_group=[]
     collection=[]
+    #print(f'in:{len(group)}')
+    x=0
     for tokens in group:
-        #print(tokens)
         for word in tokens:
-            #print(word)
-            collection.append([word])
             seed=[]
-            if word.startswith("https://" or "http://") or bool(re.search("^[0-9+,.-]+$", word)):
-                #skip URL which not start with https:// or http:// and numberic string
+            word=word.lower()
+            if word=='porter).':
+                print(s)
+            url=("https://","http://")
+            if word.startswith(url) or bool(re.search("^[0-9+,.-]+$", word)):
                 print(word)
                 seed.append(word)
                 new_group.append(seed)  
@@ -116,11 +143,7 @@ def fancyToken(group):
                 seed.append(word)
                 #print(seed)
                 if '-' in word:
-                    #deal with hyphens
-                    #print("in")
                     seed.pop()
-                    #print("seed:")
-                    #print(seed)
                     tokens=word.split('-') #remove "-" to get token array
                     #print(f'tokens is {tokens}')
                     token=''.join(tokens)#also whole words as single token
@@ -128,29 +151,35 @@ def fancyToken(group):
                     for w in tokens:
                         seed.append(w)
                     seed.append(token)
-                print(seed)
+                #print(seed)
                 
-                temp=[]   
+                temp=[]
+                temp2=[]
+                temp2=seed.copy()   
                 for s in seed:
                     #print("in2")
+                    #print(s)
+                    if s=='porter).':
+                        print(s)
                     if bool(re.search(r'[^\w\d\-\.\']',s)):
-                        #print(f's in bol:{s}')
+                        print(s)
                         w = re.sub(r'[^\w\-\.\']',' ',s)
+                        #w = re.sub(r'[^\w\-\.\']',' ',s)
                         w = w.split()
-                        #print(f'w is:{w}')
-                        #w=''.join(w)
-                        #print(f'now w is:{w}')
-                        #temp.append(w)
                         for e in w:
-                            temp.append(e)
+                            if e not in string.punctuation:
+                                temp.append(e)
+                        print(temp)
                     else:
                         temp.append(s)
                 #print(temp)
+                #if len(temp)!=0:
                 seed.clear()
                 seed=temp.copy()
                 temp.clear()
+
                 #print(len(temp))
-                print(f'seeds:{seed}')
+                #print(f'seeds:{seed}')
                 temp2=[]
                 #print(len(seed))
                 for s in seed:
@@ -158,13 +187,15 @@ def fancyToken(group):
                     
                     #if "'" in s:
                            #using translate() to remove ' from token:
+                    if s=='porter).':
+                        print(s)
                     if not bool(re.search("^[0-9+,.-]+$", s)):
-                        print(f'in prime before {s}')
+                        #print(f'in prime before {s}')
                         s=s.translate({ord("'"):None})
-                        print(f's in  prime:{s}')
+                        #print(f's in  prime:{s}')
                     #if bool(re.search("^[a-z.]+$", s)):
                     #if not bool(re.search("^[0-9+,.-]+$", s)):
-                        print(f'in dot before {s}')
+                        #print(f'in dot before {s}')
                            #Treat abbreviations as a single token
                         s=s.translate({ord("."):None})
                         print(f's in  dot:{s}')
@@ -172,32 +203,27 @@ def fancyToken(group):
                 if len(temp)!=0:
                    seed.clear()
                    seed=temp.copy()
-                print("seed")
+                #print("seed")
                 #print(seed)
+                #print(f'new group:{new_group}')
                 new_group.append(seed)
-        return new_group,collection
-    """outfile=outputFileName
-       with open(outfile,'w') as f:
-        for e in group:
-            #print(e)
-            f.write(e+'\n')"""
+    #print(f'new group:{new_group}')
+    return new_group
+    
 
 def stopping(group):
     seeds=[]
     collection=[]
     for tokens in group:
         seed=[]
-        cseed=[]
         for token in tokens:
             if token not in stopword_lst:
                seed.append(token)
-               cseed.append(token)
             else:
-               
-               cseed.append(' ')
+                seed.append('')
         seeds.append(seed)
-        collection.append(cseed)
-    return seeds,collection
+    return seeds
+
 
 def stemming(new_group):
     #print('before')
@@ -276,12 +302,6 @@ def stemming(new_group):
       seeds.append(seed)
     return seeds
 
-        
-
-
-
-
-
 if __name__ == '__main__':
     # Read arguments from command line; or use sane defaults for IDE.
     argv_len = len(sys.argv)
@@ -295,3 +315,4 @@ if __name__ == '__main__':
     stopword_lst = stopword_lst = ["a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
                     "has", "he", "in", "is", "it", "its", "of", "on", "that", "the", "to",
                     "was", "were", "with"]
+    textProcessing(inputFile,outputFilePrefix,tokenize_type,stoplist_type,stemming_type)
