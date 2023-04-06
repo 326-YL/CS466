@@ -63,10 +63,12 @@ def eval(runFile,qrelsFile):
 
     trecTop20={}#qid:rels
     relDocInTrec={}
+    trecDocs={}
     for t in trecCollection:
         #print(t)
         rels=[]
         rels2=[]
+        allDocRel=[]
         for docID in trecCollection[t][:20]:
             rel=0
             #print(docID[0])
@@ -77,16 +79,21 @@ def eval(runFile,qrelsFile):
         trecTop20[t]=rels
 
         for docID2 in trecCollection[t]:
-            rel2=0
             #print(docID[0])
             #print()
             if docID2[0] in qrelsCollection[t][0]:
                 rel2=int(qrelsCollection[t][0][docID2[0]])
                 if rel2!=0:
                    rels2.append(rel2)
+                
+                allDocRel.append(rel2)
+                   
   
         relDocInTrec[t]=rels2
+        trecDocs[t]=allDocRel
+
     #print(trecTop20)
+    print(trecDocs)
 
     perfectRanking={}
     queryRels={}
@@ -138,7 +145,62 @@ def eval(runFile,qrelsFile):
     print(totalRelFound)
 
 
-    
+    #RR
+    RR={}
+    for qid in trecDocs:
+        rel1=100
+        rel2=100
+        rel3=100
+        if 1 in trecDocs[qid]:
+            rel1=trecDocs[qid].index(1)
+        if 2 in trecDocs[qid]:
+            rel2=trecDocs[qid].index(2)
+        if 3 in trecDocs[qid]:
+            rel3=trecDocs[qid].index(3)
+
+        firstR=min(rel1,rel2,rel3)+1
+        rR=round(1/firstR,4)
+        RR[qid]=rR
+
+    #print(RR)
+
+    #P@10
+    P10={}
+    for qid in trecDocs:
+        TenDocsR=trecDocs[qid][:10]
+        #print(TenDocsR)
+        numOfNonRelDocs=TenDocsR.count(0)
+        #print(numOfRelDocs)
+        p=round((len(TenDocsR)-numOfNonRelDocs)/len(TenDocsR),4)
+        P10[qid]=p
+
+    print(P10)
+
+
+    #F1
+
+
+
+
+    #MPA
+
+
+
+    #MRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #Recall@10
 
 
 
